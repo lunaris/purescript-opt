@@ -1,0 +1,21 @@
+Name:                 ps-opt
+Version:              0.1.0.0
+Synopsis:             A PureScript optimiser.
+Description:          Please see README.md.
+
+License:              AllRightsReserved
+Category:             Language, PureScript
+Build-Type:           Simple
+
+Cabal-Version:        >= 1.10
+
+Executable ps-opt
+  Hs-Source-Dirs:     src
+  Main-Is:            Main.hs
+
+  Build-Depends:      base
+
+                    , purescript-optimisation
+
+  Default-Language:   Haskell2010
+  Ghc-Options:        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T -Wall -Werror

@@ -1,0 +1,8 @@
+resolver: lts-5.4
+flags: {}
+packages:
+- 'bin/ps-opt'
+
+- 'lib/purescript-optimisation'
+
+extra-deps:

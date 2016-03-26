@@ -1,0 +1,23 @@
+Name:                 purescript-optimisation
+Version:              0.1.0.0
+Synopsis:             Libraries for optimising PureScript and PureScript-generated JavaScript.
+Description:          Please see README.md.
+
+License:              AllRightsReserved
+Category:             Language, PureScript
+Build-Type:           Simple
+
+Cabal-Version:        >= 1.10
+
+Library
+  Hs-Source-Dirs:     src
+  Exposed-Modules:    Language.PureScript.Optimisation
+
+  Other-Modules:
+
+  Build-Depends:      base
+                    , language-javascript
+                    , syb
+
+  Default-Language:   Haskell2010
+  Ghc-Options:        -Wall -Werror
