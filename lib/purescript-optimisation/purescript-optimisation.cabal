@@ -16,8 +16,10 @@ Library
   Other-Modules:
 
   Build-Depends:      base
+                    , containers
                     , language-javascript
                     , syb
+                    , text
 
   Default-Language:   Haskell2010
   Ghc-Options:        -Wall -Werror
