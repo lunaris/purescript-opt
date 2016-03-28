@@ -3,6 +3,7 @@ flags: {}
 packages:
 - 'bin/ps-opt'
 
+- 'lib/language-javascript-0.6.0.3'
 - 'lib/purescript-optimisation'
 
 extra-deps:
