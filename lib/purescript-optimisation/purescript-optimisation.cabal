@@ -12,6 +12,7 @@ Cabal-Version:        >= 1.10
 Library
   Hs-Source-Dirs:     src
   Exposed-Modules:    Language.PureScript.Optimisation
+                    , Language.PureScript.Optimisation.JavaScript.Inliner
 
   Other-Modules:
 

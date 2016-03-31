@@ -6,93 +6,121 @@
 {-# LANGUAGE RecordWildCards    #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Language.PureScript.Optimisation.JavaScript.Inliner where
 
 import qualified Data.Generics                  as G
 import qualified Data.Maybe                     as Mb
 import qualified Data.Map.Strict                as M
+import qualified Data.Monoid                    as Mon
 import qualified Data.Text                      as T
 import qualified Language.JavaScript.Parser     as JS.P
 import qualified Language.JavaScript.Parser.AST as JS.P
 
+data Environment
+  = Environment
+      { eDeclarations :: !(M.Map QualifiedName Declaration)
+      , eImports      :: !(M.Map QualifiedName ModuleName)
+      }
+
+emptyEnvironment :: Environment
+emptyEnvironment
+  = Environment
+      { eDeclarations = M.empty
+      , eImports      = M.empty
+      }
+
+lookupDecl :: QualifiedName -> Environment -> Maybe Declaration
+lookupDecl qualifiedName Environment{..}
+  = M.lookup qualifiedName eDeclarations
+
+lookupImportIdentifier :: QualifiedName -> Environment -> Maybe ModuleName
+lookupImportIdentifier qualifiedName Environment{..}
+  = M.lookup qualifiedName eImports
+
+type EnvironmentBuilder
+  = Mon.Endo Environment
+
+idAnnot :: JS.P.JSAnnot
+idAnnot
+  = JS.P.JSAnnot JS.P.tokenPosnEmpty [JS.P.WhiteSpace JS.P.tokenPosnEmpty " "]
+
 pattern JSMethodCall_ meth args <- JS.P.JSMethodCall meth _ args _ _
   where
     JSMethodCall_ meth args
-      = JS.P.JSMethodCall meth JS.P.JSNoAnnot args JS.P.JSNoAnnot
-          (JS.P.JSSemi JS.P.JSNoAnnot)
+      = JS.P.JSMethodCall meth idAnnot args idAnnot (JS.P.JSSemi idAnnot)
 
 pattern JSExpressionParen_ e <- JS.P.JSExpressionParen _ e _
   where
-    JSExpressionParen_ e
-      = JS.P.JSExpressionParen JS.P.JSNoAnnot e JS.P.JSNoAnnot
+    JSExpressionParen_ e = JS.P.JSExpressionParen idAnnot e idAnnot
 
 pattern JSFunctionExpression_ name args block <-
   JS.P.JSFunctionExpression _ name _ args _ block
 
   where
     JSFunctionExpression_ name args block
-      = JS.P.JSFunctionExpression JS.P.JSNoAnnot name JS.P.JSNoAnnot
-          args JS.P.JSNoAnnot block
+      = JS.P.JSFunctionExpression idAnnot name idAnnot args idAnnot block
 
 pattern JSLCons_ x xs <- JS.P.JSLCons xs _ x
   where
-    JSLCons_ x xs = JS.P.JSLCons xs JS.P.JSNoAnnot x
+    JSLCons_ x xs = JS.P.JSLCons xs idAnnot x
 
 pattern JSBlock_ sts <- JS.P.JSBlock _ sts _
   where
-    JSBlock_ sts = JS.P.JSBlock JS.P.JSNoAnnot sts JS.P.JSNoAnnot
+    JSBlock_ sts = JS.P.JSBlock idAnnot sts idAnnot
 
 pattern JSMemberSquare_ obj prop <- JS.P.JSMemberSquare obj _ prop _
   where
     JSMemberSquare_ obj prop
-      = JS.P.JSMemberSquare obj JS.P.JSNoAnnot prop JS.P.JSNoAnnot
+      = JS.P.JSMemberSquare obj idAnnot prop idAnnot
 
 pattern JSMemberDot_ obj prop <- JS.P.JSMemberDot obj _ prop
   where
     JSMemberDot_ obj prop
-      = JS.P.JSMemberDot obj JS.P.JSNoAnnot prop
+      = JS.P.JSMemberDot obj idAnnot prop
 
 pattern JSIdentName_ name <- JS.P.JSIdentName _ name
   where
-    JSIdentName_ name = JS.P.JSIdentName JS.P.JSNoAnnot name
+    JSIdentName_ name = JS.P.JSIdentName idAnnot name
 
 pattern JSAssignExpression_ lhs rhs <- JS.P.JSAssignExpression lhs _ rhs
   where
     JSAssignExpression_ lhs rhs
-      = JS.P.JSAssignExpression lhs (JS.P.JSAssign JS.P.JSNoAnnot) rhs
+      = JS.P.JSAssignExpression lhs (JS.P.JSAssign idAnnot) rhs
 
 pattern JSIdentifier_ name <- JS.P.JSIdentifier _ name
   where
-    JSIdentifier_ name = JS.P.JSIdentifier JS.P.JSNoAnnot name
+    JSIdentifier_ name = JS.P.JSIdentifier idAnnot name
 
 pattern JSStringLiteral_ s <- JS.P.JSStringLiteral _ s
   where
-    JSStringLiteral_ s = JS.P.JSStringLiteral JS.P.JSNoAnnot s
+    JSStringLiteral_ s = JS.P.JSStringLiteral idAnnot s
 
 pattern JSVariable_ vs <- JS.P.JSVariable _ vs _
   where
     JSVariable_ vs
-      = JS.P.JSVariable JS.P.JSNoAnnot vs (JS.P.JSSemi JS.P.JSNoAnnot)
+      = JS.P.JSVariable idAnnot vs (JS.P.JSSemi idAnnot)
 
 pattern JSVarInit_ e <- JS.P.JSVarInit _ e
   where
-    JSVarInit_ e = JS.P.JSVarInit JS.P.JSNoAnnot e
+    JSVarInit_ e = JS.P.JSVarInit idAnnot e
 
 pattern JSReturn_ me <- JS.P.JSReturn _ me _
   where
-    JSReturn_ me = JS.P.JSReturn JS.P.JSNoAnnot me (JS.P.JSSemi JS.P.JSNoAnnot)
+    JSReturn_ me = JS.P.JSReturn idAnnot me (JS.P.JSSemi idAnnot)
 
 pattern JSMemberExpression_ f xs <- JS.P.JSMemberExpression f _ xs _
   where
     JSMemberExpression_ f xs
-      = JS.P.JSMemberExpression f JS.P.JSNoAnnot xs JS.P.JSNoAnnot
+      = JS.P.JSMemberExpression f idAnnot xs idAnnot
 
-getAllDeclMetas :: JS.P.JSAST -> M.Map QualifiedName DeclMeta
-getAllDeclMetas
-  = M.fromList . everyTopLevel getAllDeclMetasQ
+getEnvironment :: JS.P.JSAST -> Environment
+getEnvironment
+  = flip Mon.appEndo emptyEnvironment . everyTopLevel getEnvironmentQ
 
-getAllDeclMetasQ :: G.GenericQ (Maybe [(QualifiedName, DeclMeta)])
-getAllDeclMetasQ
+getEnvironmentQ :: G.GenericQ (Maybe EnvironmentBuilder)
+getEnvironmentQ
   = G.mkQ Nothing go
   where
     go (JSMethodCall_
@@ -102,17 +130,19 @@ getAllDeclMetasQ
       (JS.P.JSLOne (JSAssignExpression_
         (JSMemberSquare_ (JSIdentifier_ "PS") (JSStringLiteral_ modName)) _)))
 
-      = Just (getModuleDeclMetas (T.pack (tail (init modName))) modBody)
+      = Just (getModuleEnvironment modName' modBody)
+      where
+        modName' = T.pack (stringLiteralString modName)
 
     go _
       = Nothing
 
-getModuleDeclMetas :: T.Text -> JS.P.JSBlock -> [(QualifiedName, DeclMeta)]
-getModuleDeclMetas modName
-  = everyTopLevel getModuleDeclMetasQ
+getModuleEnvironment :: T.Text -> JS.P.JSBlock -> EnvironmentBuilder
+getModuleEnvironment modName
+  = everyTopLevel getModuleEnvironmentQ
   where
-    getModuleDeclMetasQ :: G.GenericQ (Maybe [(QualifiedName, DeclMeta)])
-    getModuleDeclMetasQ
+    getModuleEnvironmentQ :: G.GenericQ (Maybe EnvironmentBuilder)
+    getModuleEnvironmentQ
       = G.mkQ Nothing go
       where
         go (JSVariable_ (JS.P.JSLOne
@@ -120,43 +150,65 @@ getModuleDeclMetas modName
             (JSIdentifier_ declName) (JSVarInit_ declDef))))
 
           = case declDef of
-              JSMemberSquare_ _ _ ->
-                Nothing
+              JSMemberSquare_ (JSIdentifier_ "PS")
+                (JSStringLiteral_ importName) ->
+
+                let importName'
+                      = T.pack (stringLiteralString importName)
+
+                    qualifiedName
+                      = QualifiedName modName (T.pack (decodeName declName))
+
+                in  Just $ Mon.Endo $ \env ->
+                      env { eImports
+                              = M.insert qualifiedName importName'
+                                  (eImports env)
+
+                          }
 
               _ ->
-                let name = QualifiedName modName (T.pack (decodeName declName))
-                in  Just
-                      [ ( name
-                        , DeclMeta
-                            { dmName              = name
-                            , dmDefinition        = declDef
-                            , dmOperatorAlias     = maybeOperatorAlias declDef
-                            , dmPropertyAccessor  =
-                                maybePropertyAccessor declDef
+                let qualifiedName
+                      = QualifiedName modName (T.pack (decodeName declName))
 
-                            }
+                    decl
+                      = Declaration
+                          { dQualifiedName    = qualifiedName
+                          , dDefinition       = declDef
+                          , dOperatorAlias    = maybeOperatorAlias declDef
+                          , dPropertyAccessor =
+                              maybePropertyAccessor declDef
 
-                        )
+                          }
 
-                      ]
+                in  Just $ Mon.Endo $ \env ->
+                      env { eDeclarations
+                              = M.insert qualifiedName decl (eDeclarations env)
+
+                          }
 
         go _
           = Nothing
 
+type ModuleName
+  = T.Text
+
+type DeclarationName
+  = T.Text
+
 data QualifiedName
   = QualifiedName
-      { qnModule  :: !T.Text
-      , qnName    :: !T.Text
+      { qnModule  :: !ModuleName
+      , qnName    :: !DeclarationName
       }
 
   deriving (Eq, Ord, Show)
 
-data DeclMeta
-  = DeclMeta
-      { dmName              :: !QualifiedName
-      , dmDefinition        :: !JS.P.JSExpression
-      , dmOperatorAlias     :: !(Maybe String)
-      , dmPropertyAccessor  :: !(Maybe String)
+data Declaration
+  = Declaration
+      { dQualifiedName    :: !QualifiedName
+      , dDefinition       :: !JS.P.JSExpression
+      , dOperatorAlias    :: !(Maybe String)
+      , dPropertyAccessor :: !(Maybe String)
       }
 
   deriving (Eq, Show)
@@ -210,31 +262,68 @@ test :: FilePath -> FilePath -> IO ()
 test inFile outFile
   = do
       ast <- JS.P.parseFile inFile
-      let metas = getAllDeclMetas ast
-          ast'  = withAllDeclMetas (inlineOperatorAlias metas) ast
+      let env   = getEnvironment ast
+          ast'  = withAllDeclarations (inlineOperatorAlias env) ast
 
-      writeFile outFile (JS.P.renderToString ast')
+          env'  = getEnvironment ast'
+          ast'' = withAllDeclarations (inlinePropertyAccessor env') ast'
 
-inlineOperatorAlias :: M.Map QualifiedName DeclMeta
+      writeFile outFile (JS.P.renderToString ast'')
+
+inlineOperatorAlias :: Environment
                     -> QualifiedName
                     -> JS.P.JSExpression
                     -> JS.P.JSExpression
 
-inlineOperatorAlias metas name x
-  = Mb.fromMaybe x $ do
-      DeclMeta{..} <- M.lookup name metas
-      opAlias <- dmOperatorAlias
-      pure (JSIdentifier_ opAlias)
+inlineOperatorAlias env qualifiedName@(QualifiedName modName _) e
+  = Mb.fromMaybe e $ do
+      decl <- lookupDecl qualifiedName env
+      opAlias <- dOperatorAlias decl
+      let qualifiedAliasName = QualifiedName modName (T.pack opAlias)
+      aliasDecl <- lookupDecl qualifiedAliasName env
+      pure (dDefinition aliasDecl)
 
-withAllDeclMetas  :: (QualifiedName -> JS.P.JSExpression -> JS.P.JSExpression)
-                  -> JS.P.JSAST
-                  -> JS.P.JSAST
+inlinePropertyAccessor  :: Environment
+                        -> QualifiedName
+                        -> JS.P.JSExpression
+                        -> JS.P.JSExpression
 
-withAllDeclMetas f
-  = atEveryTopLevel withAllDeclMetasM
+inlinePropertyAccessor env (QualifiedName modName _)
+  = G.everywhere inlinePropertyAccessor'
   where
-    withAllDeclMetasM :: G.GenericM Maybe
-    withAllDeclMetasM
+    inlinePropertyAccessor' :: G.GenericT
+    inlinePropertyAccessor'
+      = G.mkT go
+      where
+        go :: JS.P.JSExpression -> JS.P.JSExpression
+        go e@(JSMemberExpression_
+          (JSMemberSquare_ (JSIdentifier_ objName) (JSStringLiteral_ propName))
+          (JS.P.JSLOne arg))
+
+          = Mb.fromMaybe e $ do
+              let qualifiedImportName = QualifiedName modName (T.pack objName)
+              importModName <- lookupImportIdentifier qualifiedImportName env
+
+              let qualifiedFunName
+                    = QualifiedName importModName
+                        (T.pack (stringLiteralString propName))
+
+              funDecl <- lookupDecl qualifiedFunName env
+              propAccessor <- dPropertyAccessor funDecl
+              pure (JSMemberDot_ arg (JSIdentifier_ propAccessor))
+
+        go e
+          = e
+
+withAllDeclarations :: (QualifiedName -> JS.P.JSExpression -> JS.P.JSExpression)
+                    -> JS.P.JSAST
+                    -> JS.P.JSAST
+
+withAllDeclarations f
+  = atEveryTopLevel withAllDeclarationsM
+  where
+    withAllDeclarationsM :: G.GenericM Maybe
+    withAllDeclarationsM
       = G.mkMp go
       where
         go :: JS.P.JSStatement -> Maybe JS.P.JSStatement
@@ -249,19 +338,20 @@ withAllDeclMetas f
           = Just (JSMethodCall_
               (JSExpressionParen_ (JSFunctionExpression_ name
                 (JS.P.JSLOne (JSIdentName_ "exports"))
-                (withModuleDeclMetas (T.pack (tail (init modName))) modBody)))
+                (withModuleDeclarations (T.pack (stringLiteralString modName))
+                  modBody)))
 
               ae)
 
         go _
           = Nothing
 
-    withModuleDeclMetas :: T.Text -> JS.P.JSBlock -> JS.P.JSBlock
-    withModuleDeclMetas modName
-      = atEveryTopLevel withModuleDeclMetasM
+    withModuleDeclarations :: T.Text -> JS.P.JSBlock -> JS.P.JSBlock
+    withModuleDeclarations modName
+      = atEveryTopLevel withModuleDeclarationsM
       where
-        withModuleDeclMetasM :: G.GenericM Maybe
-        withModuleDeclMetasM
+        withModuleDeclarationsM :: G.GenericM Maybe
+        withModuleDeclarationsM
           = G.mkMp go
           where
             go (JSVariable_ (JS.P.JSLOne
@@ -273,12 +363,12 @@ withAllDeclMetas f
                     Nothing
 
                   _ ->
-                    let name
+                    let qualifiedName
                           = QualifiedName modName (T.pack (decodeName declName))
 
                     in  Just (JSVariable_ (JS.P.JSLOne
                           (JS.P.JSVarInitExpression (JSIdentifier_ declName)
-                            (JSVarInit_ (f name declDef)))))
+                            (JSVarInit_ (f qualifiedName declDef)))))
 
             go _
               = Nothing
@@ -289,10 +379,10 @@ atEveryTopLevel f x
       Nothing -> G.gmapT (atEveryTopLevel f) x
       Just y  -> y
 
-everyTopLevel :: G.GenericQ (Maybe [r]) -> G.GenericQ [r]
+everyTopLevel :: Monoid m => G.GenericQ (Maybe m) -> G.GenericQ m
 everyTopLevel f x
   = case f x of
-      Nothing -> concat (G.gmapQ (everyTopLevel f) x)
+      Nothing -> G.gmapQl mappend mempty (everyTopLevel f) x
       Just ys -> ys
 
 decodeName :: String -> String
@@ -334,3 +424,7 @@ decodeSymbol "qmark"   = "?"
 decodeSymbol "at"      = "@"
 decodeSymbol "prime"   = "\'"
 decodeSymbol s         = s
+
+stringLiteralString :: String -> String
+stringLiteralString
+  = tail . init
