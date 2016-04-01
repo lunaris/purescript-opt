@@ -11,10 +11,21 @@ Cabal-Version:        >= 1.10
 
 Library
   Hs-Source-Dirs:     src
-  Exposed-Modules:    Language.PureScript.Optimisation
-                    , Language.PureScript.Optimisation.JavaScript.Inliner
+  Exposed-Modules:    Language.PureScript.Optimisation.JavaScript.Inliner
 
-  Other-Modules:
+  Other-Modules:      Language.PureScript.Optimisation.JavaScript.AST
+                    , Language.PureScript.Optimisation.JavaScript.AST.Instances
+                    , Language.PureScript.Optimisation.JavaScript.AST.Patterns
+                    , Language.PureScript.Optimisation.JavaScript.AST.Strings
+
+                    , Language.PureScript.Optimisation.JavaScript.Environment
+                    , Language.PureScript.Optimisation.JavaScript.Environment.Analyses
+                    , Language.PureScript.Optimisation.JavaScript.Environment.Builders
+                    , Language.PureScript.Optimisation.JavaScript.Environment.Operations
+                    , Language.PureScript.Optimisation.JavaScript.Environment.Traversals
+                    , Language.PureScript.Optimisation.JavaScript.Environment.Types
+
+                    , Language.PureScript.Optimisation.JavaScript.Schemes
 
   Build-Depends:      base
                     , containers
