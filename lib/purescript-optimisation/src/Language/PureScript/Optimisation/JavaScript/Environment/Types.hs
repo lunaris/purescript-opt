@@ -41,6 +41,7 @@ data Declaration
       , dDefinition       :: !JS.P.JSExpression
       , dOperatorAlias    :: !(Maybe String)
       , dPropertyAccessor :: !(Maybe String)
+      , dPlainConstructor :: !(Maybe JS.P.JSExpression)
       }
 
   deriving (Eq, Show)

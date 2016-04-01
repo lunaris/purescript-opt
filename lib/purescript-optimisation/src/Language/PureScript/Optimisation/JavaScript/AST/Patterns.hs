@@ -52,6 +52,12 @@ pattern JSAssignExpression_ lhs rhs <- JS.P.JSAssignExpression lhs _ rhs
     JSAssignExpression_ lhs rhs
       = JS.P.JSAssignExpression lhs (JS.P.JSAssign idAnnot) rhs
 
+pattern JSAssignStatement_ lhs rhs <- JS.P.JSAssignStatement lhs _ rhs _
+  where
+    JSAssignStatement_ lhs rhs
+      = JS.P.JSAssignStatement lhs (JS.P.JSAssign idAnnot) rhs
+          (JS.P.JSSemi idAnnot)
+
 pattern JSIdentifier_ name <- JS.P.JSIdentifier _ name
   where
     JSIdentifier_ name = JS.P.JSIdentifier idAnnot name
@@ -59,6 +65,12 @@ pattern JSIdentifier_ name <- JS.P.JSIdentifier _ name
 pattern JSStringLiteral_ s <- JS.P.JSStringLiteral _ s
   where
     JSStringLiteral_ s = JS.P.JSStringLiteral idAnnot s
+
+pattern JSLiteral_ s <- JS.P.JSLiteral _ s
+  where
+    JSLiteral_ s = JS.P.JSLiteral idAnnot s
+
+pattern JSThisLiteral = JSLiteral_ "this"
 
 pattern JSVariable_ vs <- JS.P.JSVariable _ vs _
   where

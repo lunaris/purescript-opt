@@ -1,5 +1,7 @@
 module Language.PureScript.Optimisation.JavaScript.AST.Strings where
 
+import qualified Data.Char as Ch
+
 decodeName :: String -> String
 decodeName []
   = []
@@ -10,10 +12,12 @@ decodeName ('$' : '$' : jsReserved)
 decodeName ('$' : cs)
   = decodeSymbol nextSym ++ decodeName rest
   where
-    (nextSym, rest) = break (== '$') cs
+    (nextSym, rest) = break (\c -> Ch.isUpper c || c == '$') cs
 
 decodeName s
-  = s
+  = untilNext ++ decodeName rest
+  where
+    (untilNext, rest) = break (== '$') s
 
 decodeSymbol :: String -> String
 decodeSymbol "_"       = "_"

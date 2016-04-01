@@ -2,6 +2,7 @@ module Language.PureScript.Optimisation.JavaScript.Environment.Analyses where
 
 import Language.PureScript.Optimisation.JavaScript.AST
 
+import qualified Data.Foldable                  as F
 import qualified Language.JavaScript.Parser.AST as JS.P
 
 maybeOperatorAlias :: JS.P.JSExpression -> Maybe String
@@ -21,7 +22,7 @@ maybeOperatorAlias _
 
 maybeIdentIdentifier :: JS.P.JSIdent -> Maybe String
 maybeIdentIdentifier (JSIdentName_ x)
-  = Just x
+  = Just (decodeName x)
 
 maybeIdentIdentifier _
   = Nothing
@@ -43,4 +44,36 @@ maybePropertyAccessor (JSFunctionExpression_ _
       = Just prop
 
 maybePropertyAccessor _
+  = Nothing
+
+maybePlainConstructor :: JS.P.JSExpression -> Maybe JS.P.JSExpression
+maybePlainConstructor e@(JSFunctionExpression_ _ args (JSBlock_ sts))
+  | Just argsIdents <- mapM maybeIdentIdentifier (F.toList args)
+  , Just stsIdents <- mapM maybeThisAssignIdentifier sts
+  , argsIdents == stsIdents
+
+      = Just e
+
+maybePlainConstructor _
+  = Nothing
+
+maybeThisAssignIdentifier :: JS.P.JSStatement -> Maybe String
+maybeThisAssignIdentifier (JSAssignStatement_
+  (JSMemberDot_ JSThisLiteral (JSIdentifier_ name))
+  (JSIdentifier_ name'))
+
+  | name == name'
+      = Just name
+
+maybeThisAssignIdentifier (JSAssignStatement_
+  (JSMemberSquare_ JSThisLiteral (JSStringLiteral_ propName))
+  (JSIdentifier_ argName))
+
+  | propName' <- stringLiteralString propName
+  , argName' <- decodeName argName
+  , propName' == argName'
+
+      = Just propName'
+
+maybeThisAssignIdentifier _
   = Nothing

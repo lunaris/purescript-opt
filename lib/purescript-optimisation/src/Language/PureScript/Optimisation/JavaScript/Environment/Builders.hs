@@ -71,9 +71,8 @@ getModuleEnvironment modName
                           { dQualifiedName    = qualifiedName
                           , dDefinition       = declDef
                           , dOperatorAlias    = maybeOperatorAlias declDef
-                          , dPropertyAccessor =
-                              maybePropertyAccessor declDef
-
+                          , dPropertyAccessor = maybePropertyAccessor declDef
+                          , dPlainConstructor = maybePlainConstructor declDef
                           }
 
                 in  Just $ Mon.Endo $ \env ->
