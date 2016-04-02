@@ -43,10 +43,22 @@ getModuleEnvironment modName
     getModuleEnvironmentQ
       = G.mkQ Nothing go
       where
+        go (JSAssignStatement_
+          (JSMemberDot_ (JSIdentifier_ "exports") (JSIdentifier_ declName))
+          declDef)
+
+          = go' declName declDef
+
         go (JSVariable_ (JS.P.JSLOne
           (JS.P.JSVarInitExpression
             (JSIdentifier_ declName) (JSVarInit_ declDef))))
 
+          = go' declName declDef
+
+        go _
+          = Nothing
+
+        go' declName declDef
           = case declDef of
               JSMemberSquare_ (JSIdentifier_ "PS")
                 (JSStringLiteral_ importName) ->
@@ -68,29 +80,18 @@ getModuleEnvironment modName
                 let qualifiedName
                       = QualifiedName modName (T.pack (decodeName declName))
 
-                    insert
-                      = M.insert qualifiedName
+                    decl
+                      = Declaration
+                          { dQualifiedName    = qualifiedName
+                          , dDefinition       = declDef
+                          , dIsIdentity       = isIdentity declDef
+                          , dOperatorAlias    = maybeOperatorAlias declDef
+                          , dPropertyAccessor = maybePropertyAccessor declDef
+                          , dPlainConstructor = maybePlainConstructor declDef
+                          }
 
                 in  Just $ Mon.Endo $ \env@Environment{..} ->
                       env { eDeclarations
-                              = insert declDef eDeclarations
-
-                          , eOperatorAliases
-                              = case maybeOperatorAlias declDef of
-                                  Nothing -> eOperatorAliases
-                                  Just oa -> insert oa eOperatorAliases
-
-                          , ePropertyAccessors
-                              = case maybePropertyAccessor declDef of
-                                  Nothing -> ePropertyAccessors
-                                  Just pa -> insert pa ePropertyAccessors
-
-                          , ePlainConstructors
-                              = case maybePlainConstructor declDef of
-                                  Nothing -> ePlainConstructors
-                                  Just pc -> insert pc ePlainConstructors
+                              = M.insert qualifiedName decl eDeclarations
 
                           }
-
-        go _
-          = Nothing

@@ -5,6 +5,17 @@ import Language.PureScript.Optimisation.JavaScript.AST
 import qualified Data.Foldable                  as F
 import qualified Language.JavaScript.Parser.AST as JS.P
 
+isIdentity :: JS.P.JSExpression -> Bool
+isIdentity (JSFunctionExpression_ _
+  (JS.P.JSLOne (JSIdentName_ argName))
+  (JSBlock_ [JSReturn_ (Just (JSIdentifier_ argName'))]))
+
+  | argName == argName'
+      = True
+
+isIdentity _
+  = False
+
 maybeOperatorAlias :: JS.P.JSExpression -> Maybe String
 maybeOperatorAlias (JSFunctionExpression_ _ args
   (JSBlock_ [JSReturn_ (Just (JSMemberExpression_ f args'))]))

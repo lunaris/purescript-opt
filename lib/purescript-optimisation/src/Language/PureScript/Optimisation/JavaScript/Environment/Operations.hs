@@ -13,16 +13,20 @@ lookupImportIdentifier qualifiedName Environment{..}
 
 lookupDecl :: QualifiedName -> Environment -> Maybe JS.P.JSExpression
 lookupDecl qualifiedName Environment{..}
-  = M.lookup qualifiedName eDeclarations
+  = dDefinition <$> M.lookup qualifiedName eDeclarations
+
+lookupIsIdentity :: QualifiedName -> Environment -> Bool
+lookupIsIdentity qualifiedName Environment{..}
+  = maybe False dIsIdentity (M.lookup qualifiedName eDeclarations)
 
 lookupOperatorAlias :: QualifiedName -> Environment -> Maybe String
 lookupOperatorAlias qualifiedName Environment{..}
-  = M.lookup qualifiedName eOperatorAliases
+  = M.lookup qualifiedName eDeclarations >>= dOperatorAlias
 
 lookupPropertyAccessor :: QualifiedName -> Environment -> Maybe String
 lookupPropertyAccessor qualifiedName Environment{..}
-  = M.lookup qualifiedName ePropertyAccessors
+  = M.lookup qualifiedName eDeclarations >>= dPropertyAccessor
 
 lookupPlainConstructor :: QualifiedName -> Environment -> Maybe [String]
 lookupPlainConstructor qualifiedName Environment{..}
-  = M.lookup qualifiedName ePlainConstructors
+  = M.lookup qualifiedName eDeclarations >>= dPlainConstructor

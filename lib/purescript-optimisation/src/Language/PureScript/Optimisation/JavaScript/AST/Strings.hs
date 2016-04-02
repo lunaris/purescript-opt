@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Language.PureScript.Optimisation.JavaScript.AST.Strings where
 
 import qualified Data.Char as Ch
