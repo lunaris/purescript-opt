@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Language.PureScript.Optimisation.JavaScript.Environment.Builders where
 
 import Language.PureScript.Optimisation.JavaScript.AST
@@ -66,18 +68,27 @@ getModuleEnvironment modName
                 let qualifiedName
                       = QualifiedName modName (T.pack (decodeName declName))
 
-                    decl
-                      = Declaration
-                          { dQualifiedName    = qualifiedName
-                          , dDefinition       = declDef
-                          , dOperatorAlias    = maybeOperatorAlias declDef
-                          , dPropertyAccessor = maybePropertyAccessor declDef
-                          , dPlainConstructor = maybePlainConstructor declDef
-                          }
+                    insert
+                      = M.insert qualifiedName
 
-                in  Just $ Mon.Endo $ \env ->
+                in  Just $ Mon.Endo $ \env@Environment{..} ->
                       env { eDeclarations
-                              = M.insert qualifiedName decl (eDeclarations env)
+                              = insert declDef eDeclarations
+
+                          , eOperatorAliases
+                              = case maybeOperatorAlias declDef of
+                                  Nothing -> eOperatorAliases
+                                  Just oa -> insert oa eOperatorAliases
+
+                          , ePropertyAccessors
+                              = case maybePropertyAccessor declDef of
+                                  Nothing -> ePropertyAccessors
+                                  Just pa -> insert pa ePropertyAccessors
+
+                          , ePlainConstructors
+                              = case maybePlainConstructor declDef of
+                                  Nothing -> ePlainConstructors
+                                  Just pc -> insert pc ePlainConstructors
 
                           }
 

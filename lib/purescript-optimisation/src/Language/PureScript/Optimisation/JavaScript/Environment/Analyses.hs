@@ -46,13 +46,13 @@ maybePropertyAccessor (JSFunctionExpression_ _
 maybePropertyAccessor _
   = Nothing
 
-maybePlainConstructor :: JS.P.JSExpression -> Maybe JS.P.JSExpression
-maybePlainConstructor e@(JSFunctionExpression_ _ args (JSBlock_ sts))
+maybePlainConstructor :: JS.P.JSExpression -> Maybe [String]
+maybePlainConstructor (JSFunctionExpression_ _ args (JSBlock_ sts))
   | Just argsIdents <- mapM maybeIdentIdentifier (F.toList args)
   , Just stsIdents <- mapM maybeThisAssignIdentifier sts
   , argsIdents == stsIdents
 
-      = Just e
+      = Just argsIdents
 
 maybePlainConstructor _
   = Nothing

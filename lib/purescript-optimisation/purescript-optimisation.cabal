@@ -25,6 +25,10 @@ Library
                     , Language.PureScript.Optimisation.JavaScript.Environment.Traversals
                     , Language.PureScript.Optimisation.JavaScript.Environment.Types
 
+                    , Language.PureScript.Optimisation.JavaScript.Inliner.OperatorAliases
+                    , Language.PureScript.Optimisation.JavaScript.Inliner.Pipeline
+                    , Language.PureScript.Optimisation.JavaScript.Inliner.PropertyAccessors
+
                     , Language.PureScript.Optimisation.JavaScript.Schemes
 
   Build-Depends:      base

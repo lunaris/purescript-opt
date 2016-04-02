@@ -21,27 +21,22 @@ data QualifiedName
 
 data Environment
   = Environment
-      { eDeclarations :: !(M.Map QualifiedName Declaration)
-      , eImports      :: !(M.Map QualifiedName ModuleName)
+      { eImports            :: !(M.Map QualifiedName ModuleName)
+      , eDeclarations       :: !(M.Map QualifiedName JS.P.JSExpression)
+      , eOperatorAliases    :: !(M.Map QualifiedName String)
+      , ePropertyAccessors  :: !(M.Map QualifiedName String)
+      , ePlainConstructors  :: !(M.Map QualifiedName [String])
       }
 
 emptyEnvironment :: Environment
 emptyEnvironment
   = Environment
-      { eDeclarations = M.empty
-      , eImports      = M.empty
+      { eImports            = M.empty
+      , eDeclarations       = M.empty
+      , eOperatorAliases    = M.empty
+      , ePropertyAccessors  = M.empty
+      , ePlainConstructors  = M.empty
       }
 
 type EnvironmentBuilder
   = Mon.Endo Environment
-
-data Declaration
-  = Declaration
-      { dQualifiedName    :: !QualifiedName
-      , dDefinition       :: !JS.P.JSExpression
-      , dOperatorAlias    :: !(Maybe String)
-      , dPropertyAccessor :: !(Maybe String)
-      , dPlainConstructor :: !(Maybe JS.P.JSExpression)
-      }
-
-  deriving (Eq, Show)
