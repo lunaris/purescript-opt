@@ -81,14 +81,7 @@ getModuleEnvironment modName
                       = QualifiedName modName (T.pack (decodeName declName))
 
                     decl
-                      = Declaration
-                          { dQualifiedName    = qualifiedName
-                          , dDefinition       = declDef
-                          , dIsIdentity       = isIdentity declDef
-                          , dOperatorAlias    = maybeOperatorAlias declDef
-                          , dPropertyAccessor = maybePropertyAccessor declDef
-                          , dPlainConstructor = maybePlainConstructor declDef
-                          }
+                      = mkDeclaration qualifiedName declDef
 
                 in  Just $ Mon.Endo $ \env@Environment{..} ->
                       env { eDeclarations

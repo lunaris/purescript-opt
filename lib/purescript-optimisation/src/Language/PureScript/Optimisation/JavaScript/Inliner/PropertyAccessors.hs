@@ -9,6 +9,14 @@ import qualified Data.Text                      as T
 import qualified Language.JavaScript.Parser     as JS.P
 import qualified Language.JavaScript.Parser.AST as JS.P
 
+-- |Inline applications of functions which only serve as property accessors,
+--  e.g.:
+--
+--  @
+--  var getProp = function getProp(x) {
+--    return x.prop;
+--  };
+--  @
 inlinePropertyAccessor  :: Environment
                         -> QualifiedName
                         -> JS.P.JSExpression

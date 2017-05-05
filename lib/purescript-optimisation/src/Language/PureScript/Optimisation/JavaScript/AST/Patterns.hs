@@ -85,6 +85,11 @@ pattern JSReturn_ me <- JS.P.JSReturn _ me _
   where
     JSReturn_ me = JS.P.JSReturn idAnnot me (JS.P.JSSemi idAnnot)
 
+pattern JSCallExpression_ f xs <- JS.P.JSCallExpression f _ xs _
+  where
+    JSCallExpression_ f xs
+      = JS.P.JSCallExpression f idAnnot xs idAnnot
+
 pattern JSMemberExpression_ f xs <- JS.P.JSMemberExpression f _ xs _
   where
     JSMemberExpression_ f xs

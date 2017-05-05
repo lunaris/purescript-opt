@@ -1,9 +1,21 @@
 module Language.PureScript.Optimisation.JavaScript.Environment.Analyses where
 
 import Language.PureScript.Optimisation.JavaScript.AST
+import Language.PureScript.Optimisation.JavaScript.Environment.Types
 
 import qualified Data.Foldable                  as F
 import qualified Language.JavaScript.Parser.AST as JS.P
+
+mkDeclaration :: QualifiedName -> JS.P.JSExpression -> Declaration
+mkDeclaration qualifiedName declDef
+  = Declaration
+      { dQualifiedName    = qualifiedName
+      , dDefinition       = declDef
+      , dIsIdentity       = isIdentity declDef
+      , dOperatorAlias    = maybeOperatorAlias declDef
+      , dPropertyAccessor = maybePropertyAccessor declDef
+      , dPlainConstructor = maybePlainConstructor declDef
+      }
 
 isIdentity :: JS.P.JSExpression -> Bool
 isIdentity (JSFunctionExpression_ _

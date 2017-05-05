@@ -25,6 +25,7 @@ Library
                     , Language.PureScript.Optimisation.JavaScript.Environment.Traversals
                     , Language.PureScript.Optimisation.JavaScript.Environment.Types
 
+                    , Language.PureScript.Optimisation.JavaScript.Inliner.Const
                     , Language.PureScript.Optimisation.JavaScript.Inliner.Identity
                     , Language.PureScript.Optimisation.JavaScript.Inliner.OperatorAliases
                     , Language.PureScript.Optimisation.JavaScript.Inliner.Pipeline

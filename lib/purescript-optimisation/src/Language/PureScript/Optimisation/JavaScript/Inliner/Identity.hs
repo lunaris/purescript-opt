@@ -10,6 +10,15 @@ import qualified Data.Text                      as T
 import qualified Language.JavaScript.Parser     as JS.P
 import qualified Language.JavaScript.Parser.AST as JS.P
 
+-- |Inline applications of functions which have been identified as
+--  operationally identical to the identity function; that is to say, functions
+--  defined in a manner analogous to:
+--
+--  @
+--  var someId = function someId(x) {
+--    return x;
+--  };
+--  @
 inlineId  :: Environment
           -> QualifiedName
           -> JS.P.JSExpression
